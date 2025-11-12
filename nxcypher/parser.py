@@ -140,9 +140,33 @@ class _AstBuilder(Transformer):
     def order_clause(self, *items):
         return list(items)
 
+    # -----------------------------------------------------------------
+    # Order clause handling
+    # -----------------------------------------------------------------
+    def order_clause(self, *items):
+        return list(items)
+
     def order_item(self, expr, order=None):
-        desc = (str(order).upper() == "DESC") if order else False
+        """Create an :class:`OrderItem`.
+
+        ``order`` is a Token (e.g. ``Token('DESC', 'DESC')``) or ``None``.
+        """
+        if order is None:
+            desc = False  # Default to ascending
+        else:
+            desc = (str(order).upper() == "DESC")
         return OrderItem(expr=expr, desc=desc)
+
+    # -----------------------------------------------------------------
+    # Skip / Limit clauses – the default transformer would return a Tree,
+    # but the ``query`` method expects a token with a ``value`` attribute.
+    # Returning the token directly simplifies downstream handling.
+    # -----------------------------------------------------------------
+    def skip_clause(self, token):
+        return token
+
+    def limit_clause(self, token):
+        return token
 
     # --- expressions ---
     def var_ref(self, name):
