@@ -1,0 +1,85 @@
+
+?start: query
+
+query: match_clause where_clause? return_clause order_clause? skip_clause? limit_clause?
+
+match_clause: "MATCH"i pattern ("," pattern)*
+
+pattern: node_pattern (pattern_element_chain)*
+pattern_element_chain: relationship_pattern node_pattern
+
+node_pattern: "(" var? labels? properties? ")"
+var: CNAME
+labels: (":" CNAME)+
+properties: "{" [prop ("," prop)*] "}"
+prop: CNAME ":" value
+
+relationship_pattern: "-" "[" var? reltypes? properties? "]" "->"
+reltypes: ":" CNAME
+
+where_clause: "WHERE"i expr
+
+return_clause: "RETURN"i return_item ("," return_item)*
+return_item: expr ("AS"i CNAME)?
+
+order_clause: "ORDER"i "BY"i order_item ("," order_item)*
+order_item: expr ("ASC"i | "DESC"i)?
+
+skip_clause: "SKIP"i INT
+limit_clause: "LIMIT"i INT
+
+?expr: or_expr
+?or_expr: and_expr
+        | or_expr "OR"i and_expr   -> or_op
+?and_expr: not_expr
+         | and_expr "AND"i not_expr -> and_op
+?not_expr: "NOT"i not_expr          -> not_op
+         | compare
+
+?compare: sum
+        | sum comp_op sum           -> compare_op
+
+?sum: term
+    | sum "+" term                  -> add
+    | sum "-" term                  -> sub
+
+?term: factor
+     | term "*" factor              -> mul
+     | term "/" factor              -> div
+     | term "%" factor              -> mod
+
+?factor: atom
+       | "-" factor                 -> neg
+
+?atom: property
+     | function_call
+     | value
+     | "(" expr ")"
+     | CNAME                        -> var_ref
+
+property: CNAME "." CNAME           -> prop_access
+
+function_call: "count"i "(" "*" ")" -> count_all
+
+?value: NUMBER      -> number
+      | ESCAPED_STRING -> string
+      | "TRUE"i     -> true
+      | "FALSE"i    -> false
+      | "NULL"i     -> null
+
+comp_op: "=" -> eq
+       | "<>" -> ne
+       | "!=" -> ne
+       | "<"  -> lt
+       | "<=" -> le
+       | ">"  -> gt
+       | ">=" -> ge
+
+%import common.CNAME
+%import common.ESCAPED_STRING
+%import common.SIGNED_NUMBER -> NUMBER
+%import common.INT
+%import common.WS
+%ignore WS
+%ignore /--[^\n]*/      // single-line comment starting with --
+%ignore /\/\/[^\n]*/    // // comments
